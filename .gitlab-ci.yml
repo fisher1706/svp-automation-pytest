@@ -1,0 +1,204 @@
+include:
+  - project: 'takamol/qiwa/infrastructure/ci-cd'
+    file: '/common-jobs/.package-docker-image.yml'
+  - project: 'takamol/qiwa/infrastructure/ci-cd'
+    file: '/common-jobs/.sonarqube-check.yml'
+  - project: 'takamol/qiwa/infrastructure/ci-cd'
+    file: '/common-jobs/.allure-report.yml'
+
+variables:
+  ALLIRE_PROJECT: svp-ui-daily
+  ALLURE_PROJECT_ID: $ALLIRE_PROJECT
+  ALLURE_RESULTS_DIRECTORY: allure-results
+  ALLURE_URL: https://allure-api.takamol.support
+  SELENIUM_URL: https://selenoid-api.takamol.support
+  ENV: master
+
+stages:
+  - build
+  - pylint
+  - tests
+  - send-test-reports
+
+.package:
+  image: takamol/ci-cd:package-latest
+  services:
+    - name: docker:dind
+  script:
+    - echo $TAKAMOL_REGISTRY_PASSWORD | docker login -u $TAKAMOL_REGISTRY_USERNAME --password-stdin
+    - docker pull $ENV_LATEST || true
+    #remove --build-arg when pip registry will be ready
+    - docker build --cache-from $ENV_LATEST --build-arg CI_JOB_TOKEN=${CI_JOB_TOKEN} --build-arg CI_SERVER_HOST=${CI_SERVER_HOST} -t $ENV_LATEST -t $VERSION_TAGGED .
+    - docker push $ENV_LATEST
+    - docker push $VERSION_TAGGED
+    - echo "Image name $VERSION_TAGGED"
+
+build:
+  stage: build
+  extends: .package
+  tags:
+    - oci-build
+  only:
+    - master
+    - merge_requests
+
+build_test_allure:
+  stage: build
+  extends: .package
+  tags:
+    - oci-build
+  variables:
+    ENV: testallure
+  only:
+    - add_allure_cleaner
+
+pylint:
+  stage: pylint
+  image: takamol/svp-automation-pytest:$CI_MERGE_REQUEST_TARGET_BRANCH_NAME-$CI_COMMIT_SHORT_SHA
+  tags:
+    - oci-build
+  before_script:
+    - mkdir -p public/badges public/lint
+    - echo undefined > public/badges/$CI_JOB_NAME.score
+  script:
+    - pylint --exit-zero --output-format=text $(find -type f -name "*.py" ! -path "**/.venv/**") | tee /tmp/pylint.txt
+    - sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' /tmp/pylint.txt > public/badges/$CI_JOB_NAME.score
+    - pylint --exit-zero --output-format=pylint_gitlab.GitlabCodeClimateReporter $(find -type f -name "*.py" ! -path "**/.venv/**") > codeclimate.json
+    - pylint --exit-zero --output-format=pylint_gitlab.GitlabPagesHtmlReporter $(find -type f -name "*.py" ! -path "**/.venv/**") > public/lint/index.html
+    - if [ $(cat public/badges/$CI_JOB_NAME.score) != 10.00 ]; then exit 1; fi
+  after_script:
+    - anybadge --overwrite --label $CI_JOB_NAME --value=$(cat public/badges/$CI_JOB_NAME.score) --file=public/badges/$CI_JOB_NAME.svg 4=red 6=orange 8=yellow 10=green
+    - |
+      echo "Your score is: $(cat public/badges/$CI_JOB_NAME.score)"
+  allow_failure: true
+  artifacts:
+    paths:
+      - public
+    reports:
+      codequality: codeclimate.json
+    when: always
+  only:
+    - merge_requests
+
+.ui_admin_tests:
+  image: takamol/svp-automation-pytest:$ENV-latest
+  allow_failure: true
+  stage: tests
+  tags:
+    - oci-shared
+  script:
+    - curl ifconfig.co
+    - pytest tests -m "ui and daily and admin" --alluredir=$ALLURE_RESULTS_DIRECTORY --grid_url=$SELENIUM_URL/wd/hub
+  artifacts:
+    paths:
+      - reports/
+      - $ALLURE_RESULTS_DIRECTORY
+    expire_in: 1 day
+    when: always
+  only:
+    - master
+
+.ui_legislator_tests:
+  image: takamol/svp-automation-pytest:$ENV-latest
+  allow_failure: true
+  stage: tests
+  tags:
+    - oci-shared
+  script:
+    - curl ifconfig.co
+    - pytest tests -m "ui and daily and legislator" --alluredir=$ALLURE_RESULTS_DIRECTORY --grid_url=$SELENIUM_URL/wd/hub
+  artifacts:
+    paths:
+      - reports/
+      - $ALLURE_RESULTS_DIRECTORY
+    expire_in: 1 day
+    when: always
+  only:
+    - master
+
+.ui_test_center_owner_tests:
+  image: takamol/svp-automation-pytest:$ENV-latest
+  allow_failure: true
+  stage: tests
+  tags:
+    - oci-shared
+  script:
+    - curl ifconfig.co
+    - pytest tests -m "ui and daily and tc" --alluredir=$ALLURE_RESULTS_DIRECTORY --grid_url=$SELENIUM_URL/wd/hub
+  artifacts:
+    paths:
+      - reports/
+      - $ALLURE_RESULTS_DIRECTORY
+    expire_in: 1 day
+    when: always
+  only:
+    - master
+
+.api_tests:
+  image: takamol/svp-automation-pytest:$ENV-latest
+  allow_failure: true
+  stage: tests
+  tags:
+    - oci-shared
+  script:
+    - pytest tests/api -m "api and daily" --reruns 5 --alluredir=$ALLURE_RESULTS_DIRECTORY
+  artifacts:
+    paths:
+      - reports/
+      - $ALLURE_RESULTS_DIRECTORY
+    expire_in: 1 day
+    when: always
+
+ui_admin_tests:
+  extends: .ui_admin_tests
+
+ui_legislator_tests:
+  extends: .ui_legislator_tests
+
+ui_test_center_owner_tests:
+  extends: .ui_test_center_owner_tests
+
+allure-ui-admin-results:
+  extends: .generate_allure_report
+  stage: send-test-reports
+  variables:
+    ALLURE_URL: https://allure-api.takamol.support
+    ALLURE_PROJECT_ID: $ALLIRE_PROJECT-admin
+  tags:
+    - oci-shared
+  dependencies:
+    - ui_admin_tests
+  needs:
+    - ui_admin_tests
+  only:
+    - master
+
+allure-ui-legislator-results:
+  extends: .generate_allure_report
+  stage: send-test-reports
+  variables:
+    ALLURE_URL: https://allure-api.takamol.support
+    ALLURE_PROJECT_ID: $ALLIRE_PROJECT-legislator
+  tags:
+    - oci-shared
+  dependencies:
+    - ui_legislator_tests
+  needs:
+    - ui_legislator_tests
+  only:
+    - master
+
+allure-ui-test_center_owner-results:
+  extends: .generate_allure_report
+  stage: send-test-reports
+  variables:
+    ALLURE_URL: https://allure-api.takamol.support
+    ALLURE_PROJECT_ID: $ALLIRE_PROJECT-tc
+  tags:
+    - oci-shared
+  dependencies:
+    - ui_test_center_owner_tests
+  needs:
+    - ui_test_center_owner_tests
+  only:
+    - master

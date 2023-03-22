@@ -1,0 +1,16 @@
+[MESSAGES CONTROL]
+disable=too-many-public-methods,
+        missing-docstring,
+        logging-fstring-interpolation,
+        too-many-instance-attributes,
+        too-few-public-methods,
+        too-many-arguments,
+        too-many-locals,
+        duplicate-code,
+        fixme
+
+[SIMILARITIES]
+ignore-imports=yes
+
+[FORMAT]
+max-line-length=120
