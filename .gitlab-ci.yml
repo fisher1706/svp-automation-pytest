@@ -37,7 +37,7 @@ build:
   stage: build
   extends: .package
   tags:
-    - dind
+    - oci-dind
   only:
     - master
     - merge_requests
@@ -46,7 +46,7 @@ build_test_allure:
   stage: build
   extends: .package
   tags:
-    - dind
+    - oci-dind
   variables:
     ENV: testallure
   only:
