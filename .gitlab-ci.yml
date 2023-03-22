@@ -54,7 +54,7 @@ build_test_allure:
 
 pylint:
   stage: pylint
-  image: takamol/svp-automation:$CI_MERGE_REQUEST_TARGET_BRANCH_NAME-$CI_COMMIT_SHORT_SHA
+  image: takamol/svp-automation-pytest:$CI_MERGE_REQUEST_TARGET_BRANCH_NAME-$CI_COMMIT_SHORT_SHA
   tags:
     - oci-build
   before_script:
