@@ -81,7 +81,7 @@ pylint:
     - merge_requests
 
 .ui_admin_tests:
-  image: takamol/svp-automation:$ENV-latest
+  image: takamol/svp-automation-pytest:$ENV-latest
   allow_failure: true
   stage: tests
   tags:
@@ -99,7 +99,7 @@ pylint:
     - master
 
 .ui_legislator_tests:
-  image: takamol/svp-automation:$ENV-latest
+  image: takamol/svp-automation-pytest:$ENV-latest
   allow_failure: true
   stage: tests
   tags:
@@ -117,7 +117,7 @@ pylint:
     - master
 
 .ui_test_center_owner_tests:
-  image: takamol/svp-automation:$ENV-latest
+  image: takamol/svp-automation-pytest:$ENV-latest
   allow_failure: true
   stage: tests
   tags:
@@ -135,7 +135,7 @@ pylint:
     - master
 
 .api_tests:
-  image: takamol/svp-automation:$ENV-latest
+  image: takamol/svp-automation-pytest:$ENV-latest
   allow_failure: true
   stage: tests
   tags:
