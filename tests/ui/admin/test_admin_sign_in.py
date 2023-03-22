@@ -31,7 +31,7 @@ class TestAdminSignIn:  # pylint: disable=attribute-defined-outside-init
     def test_login_with_valid_credentials(self):
         self.logins_action.log_in_user(UserInfo.DEFAULT_LOGIN, UserInfo.DEFAULT_PASSWORD)
         self.base_actions.verify_message(SuccessMessage.ADMIN_CONFIRM_CODE)
-        self.logins_action.proceed_2fa(two_factor_verification='otp_from_network', user_type=True)
+        self.logins_action.proceed_2fa(user_type=True)
         self.logins_action.driver_actions.clear_local_storage()
 
     @allure.title('C6250 Check log in without entering email and password')

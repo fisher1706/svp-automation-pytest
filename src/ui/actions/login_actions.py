@@ -95,4 +95,4 @@ class LoginActions(LoginPage):
     def log_in_to_admin(self):
         self.log_in_user(UserInfo.DEFAULT_LOGIN, UserInfo.DEFAULT_PASSWORD)
         self.base_actions.verify_message(SuccessMessage.ADMIN_CONFIRM_CODE)
-        self.proceed_2fa(two_factor_verification='otp_from_network')
+        self.proceed_2fa()

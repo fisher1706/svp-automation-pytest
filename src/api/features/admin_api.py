@@ -85,7 +85,7 @@ class AdminApi:
             },
             'categories': [
                 {
-                    'id': 24,
+                    'id': 51,
                     'min_score': 99
                 }
             ],
