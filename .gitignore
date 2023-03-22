@@ -1,0 +1,9 @@
+*.pyc
+*.swp
+.idea/*
+/tmp
+*.local.ini
+config/*.local.yml
+/venv
+.pytest_cache
+/test_data/test_files/*
